@@ -1,0 +1,734 @@
+Step -1
+-------
+
+A process is a computer program under execution. Linux is running many
+processes at any given time. We can monitor them on the terminal using 
+the ps command.
+
+A thread is a lightweight process or part of process. A process can do
+more than one unit of work concurrently by creating one or more 
+threads. Those threads, being lightweight, can be spawned quickly.
+
+
+ Let's identify the processes
+ 
+ [oracle@localhost ~]$ ps -ef | head -4
+UID        PID  PPID  C STIME TTY          TIME CMD
+root         1     0  0 07:37 ?        00:00:05 /usr/lib/systemd/systemd --switched-root --system --deserialize 22
+root         2     0  0 07:37 ?        00:00:00 [kthreadd]
+root         4     2  0 07:37 ?        00:00:00 [kworker/0:0H]
+
+PID - process ID 
+PPID - Parent Process ID
+C - integer value of the processor utilisation percentage where based on the values scheduling will be managed
+PPID zero means the initail process or the systemd process.
+
+When a process is started, it is given a unique number called process ID (PID)
+that identifies that process to the system.
+
+The PIDs are not always assigned in numerical order.
+
+One very important process is called init or systemd. It is the grandfather of
+all processes on the system because all other processes run under it.
+Every process can be traced back to init, and it always has a PID of 1. 
+The kernel itself has a PPID of 0.
+
+root         2     0  0 07:37 ?        00:00:00 [kthreadd]
+
+also notice the above kernel thread which goes together with systemd.
+
+Step - 2 
+--------
+
+
+What is PPID - Parent Process ID ?
+
+In addition to a unique process ID, each process is assigned a parent
+process ID (PPID) that tells which process started it. The PPID is 
+the PID of the process’s parent.
+
+[oracle@localhost ~]$ ps -ef | head -8
+UID        PID  PPID  C STIME TTY          TIME CMD
+root         1     0  0 07:37 ?        00:00:06 /usr/lib/systemd/systemd --switched-root --system --deserialize 22
+root         2     0  0 07:37 ?        00:00:00 [kthreadd]
+root         4     2  0 07:37 ?        00:00:00 [kworker/0:0H]
+root         6     2  0 07:37 ?        00:00:00 [mm_percpu_wq]
+root         7     2  0 07:37 ?        00:00:00 [ksoftirqd/0]
+root         8     2  0 07:37 ?        00:00:00 [rcu_sched]
+root         9     2  0 07:37 ?        00:00:00 [rcu_bh]
+[oracle@localhost ~]$ ps -ef |grep oracle | head -8
+root      3555  3489  0 07:42 pts/0    00:00:00 su - oracle
+oracle    3557  3555  0 07:42 pts/0    00:00:00 -bash
+oracle    3776     1  0 07:43 ?        00:00:01 ora_pmon_tnh19db
+oracle    3778     1  0 07:43 ?        00:00:00 ora_clmn_tnh19db
+oracle    3780     1  0 07:43 ?        00:00:02 ora_psp0_tnh19db
+oracle    3782     1  0 07:43 ?        00:00:03 ora_vktm_tnh19db
+oracle    3787     1  0 07:43 ?        00:00:00 ora_gen0_tnh19db
+oracle    3791     1  0 07:43 ?        00:00:00 ora_mman_tnh19db
+
+ to get the output with column headers use below
+
+ [oracle@localhost ~]$ ps -ef | egrep "ora_|PID"|head -n8
+ UID        PID  PPID  C STIME TTY          TIME CMD
+oracle   19980     1  0 18:20 ?        00:00:00 ora_pmon_tnh19db
+oracle   19982     1  0 18:20 ?        00:00:02 ora_u002_tnh19db
+oracle   19985     1  0 18:20 ?        00:00:00 ora_psp0_tnh19db
+oracle   19987     1  0 18:20 ?        00:00:00 ora_vktm_tnh19db
+oracle   19994     1  0 18:20 ?        00:00:00 ora_gen1_tnh19db
+oracle   19997     1  0 18:20 ?        00:00:11 ora_u006_tnh19db
+oracle   20000     1  0 18:20 ?        00:00:00 ora_ofsd_tnh19db
+
+ if you look at above Oracle process PPID is 1 and its PPID is 0.
+ 
+
+Step - 3 
+--------
+
+Threads - As mentioned above, a thread is a lightweight process or part of a process.
+
+ps -eLf
+
+
+    PID: Unique process identifier
+    LWP: Unique thread identifier inside a process
+    NLWP: Number of threads for a given process
+
+    
+[oracle@localhost ~]$ ps -eLf |egrep "ora_|PID"|head -n50
+UID        PID  PPID   LWP  C NLWP STIME TTY          TIME CMD
+oracle     420     1   420  0    1 21:40 ?        00:00:00 ora_m000_tnh19db
+oracle     571     1   571  0    1 21:42 ?        00:00:00 ora_m002_tnh19db
+oracle     714     1   714  0    1 21:44 ?        00:00:00 ora_m005_tnh19db
+oracle     803     1   803  0    1 21:45 ?        00:00:00 ora_m003_tnh19db
+oracle     905 20346   905  0    1 21:46 pts/0    00:00:00 grep -E --color=auto ora_|PID
+oracle   21984     1 21984  0    1 18:46 ?        00:00:00 ora_pmon_tnh19db
+oracle   21986     1 21986  0    1 18:46 ?        00:00:00 ora_clmn_tnh19db
+oracle   21988     1 21988  0    1 18:46 ?        00:00:02 ora_psp0_tnh19db
+oracle   21990     1 21990  0    1 18:46 ?        00:00:02 ora_vktm_tnh19db
+oracle   21994     1 21994  0    1 18:46 ?        00:00:00 ora_gen0_tnh19db
+oracle   21996     1 21996  0    1 18:46 ?        00:00:00 ora_mman_tnh19db
+oracle   22000     1 22000  0    2 18:46 ?        00:00:00 ora_gen1_tnh19db
+oracle   22000     1 22001  0    2 18:46 ?        00:00:02 ora_gen1_tnh19db
+oracle   22003     1 22003  0    1 18:46 ?        00:00:00 ora_diag_tnh19db
+oracle   22005     1 22005  0    2 18:46 ?        00:00:00 ora_ofsd_tnh19db
+oracle   22005     1 22006  0    2 18:46 ?        00:00:00 ora_ofsd_tnh19db
+oracle   22008     1 22008  0    1 18:46 ?        00:00:05 ora_dbrm_tnh19db
+oracle   22010     1 22010  0    1 18:46 ?        00:00:00 ora_vkrm_tnh19db
+oracle   22012     1 22012  0    1 18:46 ?        00:00:00 ora_svcb_tnh19db
+oracle   22014     1 22014  0    1 18:46 ?        00:00:01 ora_pman_tnh19db
+oracle   22016     1 22016  0    1 18:46 ?        00:00:07 ora_dia0_tnh19db
+oracle   22019     1 22019  0    1 18:46 ?        00:00:00 ora_dbw0_tnh19db
+oracle   22021     1 22021  0    1 18:46 ?        00:00:00 ora_lgwr_tnh19db
+oracle   22023     1 22023  0    1 18:46 ?        00:00:02 ora_ckpt_tnh19db
+oracle   22025     1 22025  0    1 18:46 ?        00:00:00 ora_smon_tnh19db
+oracle   22027     1 22027  0    1 18:46 ?        00:00:00 ora_smco_tnh19db
+oracle   22029     1 22029  0    1 18:46 ?        00:00:00 ora_w000_tnh19db
+oracle   22031     1 22031  0    1 18:46 ?        00:00:00 ora_reco_tnh19db
+oracle   22033     1 22033  0    1 18:46 ?        00:00:00 ora_w001_tnh19db
+oracle   22035     1 22035  0    1 18:46 ?        00:00:00 ora_lreg_tnh19db
+oracle   22040     1 22040  0    1 18:46 ?        00:00:00 ora_pxmn_tnh19db
+oracle   22049     1 22049  0    1 18:46 ?        00:00:04 ora_mmon_tnh19db
+oracle   22051     1 22051  0    1 18:46 ?        00:00:03 ora_mmnl_tnh19db
+oracle   22053     1 22053  0    1 18:46 ?        00:00:00 ora_d000_tnh19db
+oracle   22055     1 22055  0    1 18:46 ?        00:00:00 ora_s000_tnh19db
+oracle   22057     1 22057  0    1 18:46 ?        00:00:00 ora_tmon_tnh19db
+oracle   22071     1 22071  0    1 18:47 ?        00:00:00 ora_tt00_tnh19db
+oracle   22073     1 22073  0    1 18:47 ?        00:00:00 ora_tt01_tnh19db
+oracle   22075     1 22075  0    1 18:47 ?        00:00:00 ora_tt02_tnh19db
+oracle   22080     1 22080  0    1 18:47 ?        00:00:00 ora_aqpc_tnh19db
+oracle   22082     1 22082  0    1 18:47 ?        00:00:00 ora_qm02_tnh19db
+oracle   22084     1 22084  0    1 18:47 ?        00:00:00 ora_q001_tnh19db
+oracle   22088     1 22088  0    1 18:47 ?        00:00:10 ora_cjq0_tnh19db
+oracle   22093     1 22093  0    1 18:47 ?        00:00:00 ora_p000_tnh19db
+oracle   22095     1 22095  0    1 18:47 ?        00:00:00 ora_p001_tnh19db
+oracle   22240     1 22240  0    1 18:47 ?        00:00:00 ora_w002_tnh19db
+oracle   22264     1 22264  0    1 18:47 ?        00:00:00 ora_w003_tnh19db
+oracle   22290     1 22290  0    1 18:47 ?        00:00:00 ora_w004_tnh19db
+oracle   22312     1 22312  0    1 18:47 ?        00:00:00 ora_q003_tnh19db
+
+
+   
+ 
+  if you notice above the below given process are having multiple threds
+  
+oracle   22000     1 22000  0    2 18:46 ?        00:00:00 ora_gen1_tnh19db
+oracle   22000     1 22001  0    2 18:46 ?        00:00:02 ora_gen1_tnh19db
+
+oracle   22005     1 22005  0    2 18:46 ?        00:00:00 ora_ofsd_tnh19db
+oracle   22005     1 22006  0    2 18:46 ?        00:00:00 ora_ofsd_tnh19db
+
+
+  -n will sort the output based on access time.
+  
+    
+  ora_gen1 - General Task Execution Process - Performs required tasks including SQL and DML
+ 
+  ora_ofsd - Oracle File Server Background Process ( new in 12.2). OFS makes the setup
+  and management of database backed file systems much simpler, as well as simplifying
+  the management of FUSE to mount the file systems on the database server.
+  
+  Filesystem in USErspace (FUSE) is a software interface for Unix and Unix-like computer operating systems that 
+  lets non-privileged users create their own file systems without editing kernel code
+  
+  The performance of the OFS file server can be influenced by the OFS_THREADS parameter, 
+  which defaults to the value 4, but has valid values between 2 and 128.
+  
+   REF :
+   https://docs.oracle.com/en/database/oracle/oracle-database/12.2/refrn/OFS_THREADS.html#GUID-76B8B306-C8DC-414B-9491-65532D696E46
+   
+   
+Step - 4 
+--------
+ 
+ [oracle@localhost ~]$ top
+
+top - 12:57:50 up  5:20,  2 users,  load average: 1.06, 0.95, 0.73
+Tasks: 293 total,   1 running, 223 sleeping,   0 stopped,   0 zombie
+%Cpu(s): 11.6 us,  2.9 sy,  0.0 ni, 84.1 id,  0.0 wa,  1.1 hi,  0.4 si,  0.0 st
+KiB Mem : 11020492 total,  1418328 free,  2498512 used,  7103652 buff/cache
+KiB Swap:  5701628 total,  5701628 free,        0 used.  4929008 avail Mem 
+
+  PID USER      PR  NI    VIRT    RES    SHR S %CPU %MEM     TIME+ COMMAND                    
+ 4483 root      20   0 3249848 439084 166584 S  8.0  4.0   6:37.73 Web Content                
+ 7467 root      20   0 3383424 529664 182744 S  6.0  4.8   3:59.05 Web Content                
+ 4168 root      20   0 3868096 502492 171876 S  3.3  4.6   9:37.08 firefox                    
+21091 root      20   0  359312  38812  31476 S  1.0  0.4   0:29.27 RDD Process                
+ 2944 root      20   0 3036856 269112 113180 S  0.7  2.4   3:49.21 gnome-shell                
+ 3120 root       9 -11 1811448  12640   9616 S  0.7  0.1   0:19.09 pulseaudio                 
+24003 oracle    20   0  163716   4616   3776 R  0.7  0.0   0:00.05 top                        
+    8 root      20   0       0      0      0 I  0.3  0.0   0:01.01 rcu_sched     
+
+
+    load average: 1.06, 0.95, 0.73
+    These numbers are the averages of the system load over a period of one, five, and 15 minutes. 
+ 
+ 
+    Between 0.00 and 1.0, there is no need to worry. Your servers are safe!
+    1.5 means the queue is filling up. If the average gets any higher, things are going to start slowing down.
+    3.00 means there's a considerably long queue waiting, and an extra resources is required to clear up the queue faster. 
+
+    
+    If the averages are 0.0, then your system is idle.
+    If the 1 minute average is higher than the 5 or 15 minute averages, then load is increasing.
+    If the 1 minute average is lower than the 5 or 15 minute averages, then load is decreasing.
+    If they are higher than your CPU count, then you might have a performance problem (it depends).
+
+ 
+    us: Amount of time the CPU spends executing processes for people in “user space.”
+    sy: Amount of time spent running system “kernel space” processes.
+    ni: Amount of time spent executing processes with a manually set nice value.
+    id: Amount of CPU idle time.
+    wa: Amount of time the CPU spends waiting for I/O to complete.
+    hi: Amount of time spent servicing hardware interrupts.
+    si: Amount of time spent servicing software interrupts.
+    st: Amount of time lost due to running virtual machines (“steal time”).
+
+
+    PID: Process ID.
+    USER: The owner of the process.
+    PR: Process priority.
+    NI: The nice value of the process.
+    VIRT: Amount of virtual memory used by the process.
+    RES: Amount of resident memory used by the process.
+    SHR: Amount of shared memory used by the process.
+    S: Status of the process. (See the list below for the values this field can take).
+    %CPU: The share of CPU time used by the process since the last update.
+    %MEM: The share of physical memory used.
+    TIME+: Total CPU time used by the task in hundredths of a second.
+    COMMAND: The command name or command line (name + options).
+
+
+   The status of the process can be one of the following:
+
+    D: Uninterruptible sleep
+    R: Running
+    S: Sleeping
+    T: Traced (stopped)
+    Z: Zombie
+
+
+Changing the Numeric Units
+
+Let’s change the display units to sensible values. Press capital E to cycle 
+through the units used to display memory values ,  options: kibibytes,
+mebibytes, gibibytes, tebibytes, pebibytes, and exbibytes. 
+The unit in use is the first item on lines four and five.
+
+Press lowercase “e” to do the same thing for the values in the process 
+list: kibibytes, mebibytes, gibibytes, tebibytes, and pebibytes.
+
+ Step - 5
+ --------
+ 
+ THREADED_EXECUTION - Parameter
+ 
+ Ref:
+ https://docs.oracle.com/en/database/oracle/oracle-database/12.2/refrn/THREADED_EXECUTION.html#GUID-7A668A49-9FC5-4245-AD27-10D90E5AE8A8
+ 
+ 
+ Connected to:
+Oracle Database 19c Enterprise Edition Release 19.0.0.0.0 - Production
+Version 19.3.0.0.0
+
+SQL> show parameter THREADED_EXECUTION
+
+NAME				     TYPE	 VALUE
+------------------------------------ ----------- ------------------------------
+threaded_execution		     boolean	 FALSE
+
+Let's check the PID and TID  details at database level
+
+SQL> COL SPID FORMAT a8
+SQL> COL STID FORMAT a8
+SQL> SELECT SPID, STID, PROGRAM FROM V$PROCESS ORDER BY SPID;
+
+SPID	 STID	  PROGRAM
+-------- -------- ------------------------------------------------
+20878	 20878	  oracle@localhost.localdomain (W006)
+20912	 20912	  oracle@localhost.localdomain (W001)
+29866	 29866	  oracle@localhost.localdomain (W004)
+29871	 29871	  oracle@localhost.localdomain (W003)
+29876	 29876	  oracle@localhost.localdomain (W002)
+29881	 29881	  oracle@localhost.localdomain (W000)
+29885	 29885	  oracle@localhost.localdomain (W005)
+32240	 32240	  oracle@localhost.localdomain (M000)
+32340	 32340	  oracle@localhost.localdomain (TNS V1-V3)
+32422	 32422	  oracle@localhost.localdomain (M001)
+32486	 32486	  oracle@localhost.localdomain (M004)
+
+SPID	 STID	  PROGRAM
+-------- -------- ------------------------------------------------
+32610	 32610	  oracle@localhost.localdomain (M003)
+3776	 3776	  oracle@localhost.localdomain (PMON)
+3778	 3778	  oracle@localhost.localdomain (CLMN)
+3780	 3780	  oracle@localhost.localdomain (PSP0)
+3782	 3782	  oracle@localhost.localdomain (VKTM)
+3787	 3787	  oracle@localhost.localdomain (GEN0)
+3791	 3791	  oracle@localhost.localdomain (MMAN)
+3793	 3794	  oracle@localhost.localdomain (GEN1)
+3793	 3793	  oracle@localhost.localdomain (SCMN)
+3796	 3796	  oracle@localhost.localdomain (DIAG)
+3798	 3799	  oracle@localhost.localdomain (OFSD)
+
+SPID	 STID	  PROGRAM
+-------- -------- ------------------------------------------------
+3798	 3798	  oracle@localhost.localdomain (SCMN)
+3801	 3801	  oracle@localhost.localdomain (DBRM)
+3803	 3803	  oracle@localhost.localdomain (VKRM)
+3805	 3805	  oracle@localhost.localdomain (SVCB)
+3807	 3807	  oracle@localhost.localdomain (PMAN)
+3810	 3810	  oracle@localhost.localdomain (DIA0)
+3812	 3812	  oracle@localhost.localdomain (DBW0)
+3814	 3814	  oracle@localhost.localdomain (LGWR)
+3816	 3816	  oracle@localhost.localdomain (CKPT)
+3818	 3818	  oracle@localhost.localdomain (SMON)
+3820	 3820	  oracle@localhost.localdomain (SMCO)
+
+SPID	 STID	  PROGRAM
+-------- -------- ------------------------------------------------
+3825	 3825	  oracle@localhost.localdomain (RECO)
+3829	 3829	  oracle@localhost.localdomain (LREG)
+3831	 3831	  oracle@localhost.localdomain (PXMN)
+3835	 3835	  oracle@localhost.localdomain (MMON)
+3837	 3837	  oracle@localhost.localdomain (MMNL)
+3842	 3842	  oracle@localhost.localdomain (D000)
+3844	 3844	  oracle@localhost.localdomain (S000)
+3846	 3846	  oracle@localhost.localdomain (TMON)
+3877	 3877	  oracle@localhost.localdomain (TT00)
+3879	 3879	  oracle@localhost.localdomain (TT01)
+3882	 3882	  oracle@localhost.localdomain (TT02)
+
+SPID	 STID	  PROGRAM
+-------- -------- ------------------------------------------------
+3894	 3894	  oracle@localhost.localdomain (AQPC)
+3898	 3898	  oracle@localhost.localdomain (QM02)
+3900	 3900	  oracle@localhost.localdomain (Q001)
+3926	 3926	  oracle@localhost.localdomain (Q00E)
+3952	 3952	  oracle@localhost.localdomain (P000)
+3954	 3954	  oracle@localhost.localdomain (P001)
+3959	 3959	  oracle@localhost.localdomain (CJQ0)
+5411	 5411	  oracle@localhost.localdomain (W007)
+		  PSEUDO
+
+53 rows selected.
+
+ as you notice above not that much of threads are running except for GEN and OFSD process.
+
+You may also see PSEUDO for sessions which have been killed and not yet cleaned up.
+ 
+ 
+ 
+ [oracle@localhost ~]$ sqlplus sys/oracle as sysdba
+  SQL*Plus: Release 19.0.0.0.0 - Production on Mon Nov 1 15:41:03 2021
+Version 19.3.0.0.0
+
+SQL> show parameter thread
+
+NAME				     TYPE	 VALUE
+------------------------------------ ----------- ------------------------------
+ofs_threads			     integer	 4
+parallel_threads_per_cpu	     integer	 1
+thread				     integer	 0
+threaded_execution		     boolean	 FALSE
+
+Let's check the process at OS level as well.
+
+[oracle@localhost ~]$ ps -ef |egrep "ora_|PID"
+UID        PID  PPID  C STIME TTY          TIME CMD
+oracle     420     1  0 21:40 ?        00:00:00 ora_m000_tnh19db
+oracle     571     1  0 21:42 ?        00:00:00 ora_m002_tnh19db
+oracle     975     1  0 21:47 ?        00:00:00 ora_m004_tnh19db
+oracle    1292     1  0 21:52 ?        00:00:00 ora_m005_tnh19db
+oracle    1362 20346  0 21:53 pts/0    00:00:00 grep -E --color=auto ora_|PID
+oracle   21984     1  0 18:46 ?        00:00:00 ora_pmon_tnh19db
+oracle   21986     1  0 18:46 ?        00:00:00 ora_clmn_tnh19db
+oracle   21988     1  0 18:46 ?        00:00:02 ora_psp0_tnh19db
+oracle   21990     1  0 18:46 ?        00:00:03 ora_vktm_tnh19db
+oracle   21994     1  0 18:46 ?        00:00:00 ora_gen0_tnh19db
+oracle   21996     1  0 18:46 ?        00:00:00 ora_mman_tnh19db
+oracle   22000     1  0 18:46 ?        00:00:03 ora_gen1_tnh19db
+oracle   22003     1  0 18:46 ?        00:00:00 ora_diag_tnh19db
+oracle   22005     1  0 18:46 ?        00:00:00 ora_ofsd_tnh19db
+oracle   22008     1  0 18:46 ?        00:00:05 ora_dbrm_tnh19db
+oracle   22010     1  0 18:46 ?        00:00:00 ora_vkrm_tnh19db
+oracle   22012     1  0 18:46 ?        00:00:00 ora_svcb_tnh19db
+oracle   22014     1  0 18:46 ?        00:00:01 ora_pman_tnh19db
+oracle   22016     1  0 18:46 ?        00:00:08 ora_dia0_tnh19db
+oracle   22019     1  0 18:46 ?        00:00:00 ora_dbw0_tnh19db
+oracle   22021     1  0 18:46 ?        00:00:00 ora_lgwr_tnh19db
+oracle   22023     1  0 18:46 ?        00:00:03 ora_ckpt_tnh19db
+oracle   22025     1  0 18:46 ?        00:00:00 ora_smon_tnh19db
+oracle   22027     1  0 18:46 ?        00:00:00 ora_smco_tnh19db
+oracle   22029     1  0 18:46 ?        00:00:00 ora_w000_tnh19db
+oracle   22031     1  0 18:46 ?        00:00:00 ora_reco_tnh19db
+oracle   22033     1  0 18:46 ?        00:00:00 ora_w001_tnh19db
+oracle   22035     1  0 18:46 ?        00:00:00 ora_lreg_tnh19db
+oracle   22040     1  0 18:46 ?        00:00:00 ora_pxmn_tnh19db
+oracle   22049     1  0 18:46 ?        00:00:04 ora_mmon_tnh19db
+oracle   22051     1  0 18:46 ?        00:00:03 ora_mmnl_tnh19db
+oracle   22053     1  0 18:46 ?        00:00:00 ora_d000_tnh19db
+oracle   22055     1  0 18:46 ?        00:00:00 ora_s000_tnh19db
+oracle   22057     1  0 18:46 ?        00:00:00 ora_tmon_tnh19db
+oracle   22071     1  0 18:47 ?        00:00:00 ora_tt00_tnh19db
+oracle   22073     1  0 18:47 ?        00:00:00 ora_tt01_tnh19db
+oracle   22075     1  0 18:47 ?        00:00:00 ora_tt02_tnh19db
+oracle   22080     1  0 18:47 ?        00:00:00 ora_aqpc_tnh19db
+oracle   22082     1  0 18:47 ?        00:00:00 ora_qm02_tnh19db
+oracle   22084     1  0 18:47 ?        00:00:00 ora_q001_tnh19db
+oracle   22088     1  0 18:47 ?        00:00:10 ora_cjq0_tnh19db
+oracle   22093     1  0 18:47 ?        00:00:00 ora_p000_tnh19db
+oracle   22095     1  0 18:47 ?        00:00:00 ora_p001_tnh19db
+oracle   22240     1  0 18:47 ?        00:00:00 ora_w002_tnh19db
+oracle   22264     1  0 18:47 ?        00:00:00 ora_w003_tnh19db
+oracle   22290     1  0 18:47 ?        00:00:00 ora_w004_tnh19db
+oracle   22312     1  0 18:47 ?        00:00:00 ora_q003_tnh19db
+oracle   22894     1  0 18:57 ?        00:00:00 ora_w005_tnh19db
+oracle   22898     1  0 18:57 ?        00:00:00 ora_w006_tnh19db
+oracle   22902     1  0 18:57 ?        00:00:00 ora_w007_tnh19db
+oracle   32685     1  0 21:37 ?        00:00:00 ora_m001_tnh19db
+
+
+similarly the thread count
+
+[oracle@localhost ~]$ ps -eLf |egrep "ora_|PID"
+UID        PID  PPID   LWP  C NLWP STIME TTY          TIME CMD
+oracle     420     1   420  0    1 21:40 ?        00:00:00 ora_m000_tnh19db
+oracle     571     1   571  0    1 21:42 ?        00:00:00 ora_m002_tnh19db
+oracle     975     1   975  0    1 21:47 ?        00:00:00 ora_m004_tnh19db
+oracle    1292     1  1292  0    1 21:52 ?        00:00:00 ora_m005_tnh19db
+oracle    1463 20346  1463  0    1 21:55 pts/0    00:00:00 grep -E --color=auto ora_|PID
+oracle   21984     1 21984  0    1 18:46 ?        00:00:00 ora_pmon_tnh19db
+oracle   21986     1 21986  0    1 18:46 ?        00:00:00 ora_clmn_tnh19db
+oracle   21988     1 21988  0    1 18:46 ?        00:00:02 ora_psp0_tnh19db
+oracle   21990     1 21990  0    1 18:46 ?        00:00:03 ora_vktm_tnh19db
+oracle   21994     1 21994  0    1 18:46 ?        00:00:00 ora_gen0_tnh19db
+oracle   21996     1 21996  0    1 18:46 ?        00:00:00 ora_mman_tnh19db
+oracle   22000     1 22000  0    2 18:46 ?        00:00:00 ora_gen1_tnh19db
+oracle   22000     1 22001  0    2 18:46 ?        00:00:03 ora_gen1_tnh19db
+oracle   22003     1 22003  0    1 18:46 ?        00:00:00 ora_diag_tnh19db
+oracle   22005     1 22005  0    2 18:46 ?        00:00:00 ora_ofsd_tnh19db
+oracle   22005     1 22006  0    2 18:46 ?        00:00:00 ora_ofsd_tnh19db
+oracle   22008     1 22008  0    1 18:46 ?        00:00:05 ora_dbrm_tnh19db
+oracle   22010     1 22010  0    1 18:46 ?        00:00:00 ora_vkrm_tnh19db
+oracle   22012     1 22012  0    1 18:46 ?        00:00:00 ora_svcb_tnh19db
+oracle   22014     1 22014  0    1 18:46 ?        00:00:01 ora_pman_tnh19db
+oracle   22016     1 22016  0    1 18:46 ?        00:00:08 ora_dia0_tnh19db
+oracle   22019     1 22019  0    1 18:46 ?        00:00:00 ora_dbw0_tnh19db
+oracle   22021     1 22021  0    1 18:46 ?        00:00:00 ora_lgwr_tnh19db
+oracle   22023     1 22023  0    1 18:46 ?        00:00:03 ora_ckpt_tnh19db
+oracle   22025     1 22025  0    1 18:46 ?        00:00:00 ora_smon_tnh19db
+oracle   22027     1 22027  0    1 18:46 ?        00:00:01 ora_smco_tnh19db
+oracle   22029     1 22029  0    1 18:46 ?        00:00:00 ora_w000_tnh19db
+oracle   22031     1 22031  0    1 18:46 ?        00:00:00 ora_reco_tnh19db
+oracle   22033     1 22033  0    1 18:46 ?        00:00:00 ora_w001_tnh19db
+oracle   22035     1 22035  0    1 18:46 ?        00:00:00 ora_lreg_tnh19db
+oracle   22040     1 22040  0    1 18:46 ?        00:00:00 ora_pxmn_tnh19db
+oracle   22049     1 22049  0    1 18:46 ?        00:00:04 ora_mmon_tnh19db
+oracle   22051     1 22051  0    1 18:46 ?        00:00:03 ora_mmnl_tnh19db
+oracle   22053     1 22053  0    1 18:46 ?        00:00:00 ora_d000_tnh19db
+oracle   22055     1 22055  0    1 18:46 ?        00:00:00 ora_s000_tnh19db
+oracle   22057     1 22057  0    1 18:46 ?        00:00:00 ora_tmon_tnh19db
+oracle   22071     1 22071  0    1 18:47 ?        00:00:00 ora_tt00_tnh19db
+oracle   22073     1 22073  0    1 18:47 ?        00:00:00 ora_tt01_tnh19db
+oracle   22075     1 22075  0    1 18:47 ?        00:00:00 ora_tt02_tnh19db
+oracle   22080     1 22080  0    1 18:47 ?        00:00:00 ora_aqpc_tnh19db
+oracle   22082     1 22082  0    1 18:47 ?        00:00:00 ora_qm02_tnh19db
+oracle   22084     1 22084  0    1 18:47 ?        00:00:00 ora_q001_tnh19db
+oracle   22088     1 22088  0    1 18:47 ?        00:00:10 ora_cjq0_tnh19db
+oracle   22093     1 22093  0    1 18:47 ?        00:00:00 ora_p000_tnh19db
+oracle   22095     1 22095  0    1 18:47 ?        00:00:00 ora_p001_tnh19db
+oracle   22240     1 22240  0    1 18:47 ?        00:00:00 ora_w002_tnh19db
+oracle   22264     1 22264  0    1 18:47 ?        00:00:00 ora_w003_tnh19db
+oracle   22290     1 22290  0    1 18:47 ?        00:00:00 ora_w004_tnh19db
+oracle   22312     1 22312  0    1 18:47 ?        00:00:00 ora_q003_tnh19db
+oracle   22894     1 22894  0    1 18:57 ?        00:00:00 ora_w005_tnh19db
+oracle   22898     1 22898  0    1 18:57 ?        00:00:00 ora_w006_tnh19db
+oracle   22902     1 22902  0    1 18:57 ?        00:00:00 ora_w007_tnh19db
+
+
+SQL> alter system set threaded_execution=true scope=spfile;
+
+SQL> shut immediate;                              
+Database closed.
+Database dismounted.
+ORACLE instance shut down.
+SQL> startup
+ORACLE instance started.
+
+Total System Global Area 3388995104 bytes
+Fixed Size		    8902176 bytes
+Variable Size		  671088640 bytes
+Database Buffers	 2701131776 bytes
+Redo Buffers		    7872512 bytes
+Database mounted.
+Database opened.
+
+ 
+SQL> show parameter threaded_execution
+
+NAME				     TYPE	 VALUE
+------------------------------------ ----------- ------------------------------
+threaded_execution		     boolean	 TRUE
+SQL> exit
+Disconnected from Oracle Database 19c Enterprise Edition Release 19.0.0.0.0 - Production
+Version 19.3.0.0.0
+
+
+Now Let's check the process at OS level again.
+
+
+[oracle@localhost ~]$ ps -ef |egrep "ora_|PID"
+UID        PID  PPID  C STIME TTY          TIME CMD
+oracle    1553     1  0 21:56 ?        00:00:00 ora_pmon_tnh19db
+oracle    1555     1  0 21:56 ?        00:00:01 ora_u002_tnh19db
+oracle    1558     1  0 21:56 ?        00:00:00 ora_psp0_tnh19db
+oracle    1560     1  0 21:56 ?        00:00:00 ora_vktm_tnh19db
+oracle    1567     1  0 21:56 ?        00:00:00 ora_gen1_tnh19db
+oracle    1570     1 17 21:56 ?        00:01:04 ora_u006_tnh19db
+oracle    1573     1  0 21:56 ?        00:00:00 ora_ofsd_tnh19db
+oracle    1581     1  0 21:56 ?        00:00:00 ora_dbw0_tnh19db
+oracle    1583     1  0 21:56 ?        00:00:00 ora_lgwr_tnh19db
+oracle    1599     1  0 21:56 ?        00:00:00 ora_u00a_tnh19db
+oracle    2262 20346  0 22:02 pts/0    00:00:00 grep -E --color=auto ora_|PID
+
+
+ 
+ as you can notice the number of process has gone down.
+ Please note below 
+ 
+ oracle    1570     1 17 21:56 ?        00:01:04 ora_u006_tnh19db
+  
+  the u00 process group the threads and threads are hidden inside.
+  
+ Let's take a look at the threads inside the process 19997
+ 
+ [oracle@localhost ~]$ pidstat -t -p 1570
+Linux 4.14.35-2047.503.1.el7uek.x86_64 (localhost.localdomain) 	11/02/2021 	_x86_64_	(1 CPU)
+
+10:19:43 PM   UID      TGID       TID    %usr %system  %guest    %CPU   CPU  Command
+10:19:43 PM 54321      1570         -    0.06    0.00    0.00    0.06     0  ora_scmn_tnh19d
+10:19:43 PM 54321         -      1570    0.00    0.00    0.00    0.00     0  |__ora_scmn_tnh19d
+10:19:43 PM 54321         -      1571    0.00    0.00    0.00    0.00     0  |__ora_diag_tnh19d
+10:19:43 PM 54321         -      1576    0.00    0.00    0.00    0.00     0  |__ora_vkrm_tnh19d
+10:19:43 PM 54321         -      1577    0.00    0.00    0.00    0.00     0  |__ora_svcb_tnh19d
+10:19:43 PM 54321         -      1579    0.00    0.00    0.00    0.00     0  |__ora_dia0_tnh19d
+10:19:43 PM 54321         -      1587    0.00    0.00    0.00    0.00     0  |__ora_smco_tnh19d
+10:19:43 PM 54321         -      1588    0.00    0.00    0.00    0.00     0  |__ora_w000_tnh19d
+10:19:43 PM 54321         -      1589    0.00    0.00    0.00    0.00     0  |__ora_reco_tnh19d
+10:19:43 PM 54321         -      1590    0.00    0.00    0.00    0.00     0  |__ora_w001_tnh19d
+10:19:43 PM 54321         -      1592    0.00    0.00    0.00    0.00     0  |__ora_pxmn_tnh19d
+10:19:43 PM 54321         -      1594    0.00    0.00    0.00    0.00     0  |__ora_mmon_tnh19d
+10:19:43 PM 54321         -      1595    0.00    0.00    0.00    0.00     0  |__ora_mmnl_tnh19d
+10:19:43 PM 54321         -      1596    0.00    0.00    0.00    0.00     0  |__ora_d000_tnh19d
+10:19:43 PM 54321         -      1597    0.00    0.00    0.00    0.00     0  |__ora_s000_tnh19d
+10:19:43 PM 54321         -      1601    0.00    0.00    0.00    0.00     0  |__ora_n000_tnh19d
+10:19:43 PM 54321         -      1605    0.00    0.00    0.00    0.00     0  |__oracle_1605_tnh
+10:19:43 PM 54321         -      1606    0.00    0.00    0.00    0.00     0  |__oracle_1606_tnh
+10:19:43 PM 54321         -      1607    0.00    0.00    0.00    0.00     0  |__oracle_1607_tnh
+10:19:43 PM 54321         -      1608    0.00    0.00    0.00    0.00     0  |__oracle_1608_tnh
+10:19:43 PM 54321         -      1609    0.00    0.00    0.00    0.00     0  |__oracle_1609_tnh
+10:19:43 PM 54321         -      1610    0.00    0.00    0.00    0.00     0  |__oracle_1610_tnh
+10:19:43 PM 54321         -      1611    0.00    0.00    0.00    0.00     0  |__oracle_1611_tnh
+10:19:43 PM 54321         -      1612    0.00    0.00    0.00    0.00     0  |__oracle_1612_tnh
+10:19:43 PM 54321         -      1613    0.00    0.00    0.00    0.00     0  |__oracle_1613_tnh
+10:19:43 PM 54321         -      1614    0.00    0.00    0.00    0.00     0  |__oracle_1614_tnh
+10:19:43 PM 54321         -      1615    0.00    0.00    0.00    0.00     0  |__oracle_1615_tnh
+10:19:43 PM 54321         -      1616    0.00    0.00    0.00    0.00     0  |__oracle_1616_tnh
+10:19:43 PM 54321         -      1617    0.00    0.00    0.00    0.00     0  |__oracle_1617_tnh
+10:19:43 PM 54321         -      1618    0.00    0.00    0.00    0.00     0  |__oracle_1618_tnh
+10:19:43 PM 54321         -      1619    0.00    0.00    0.00    0.00     0  |__oracle_1619_tnh
+10:19:43 PM 54321         -      1630    0.00    0.00    0.00    0.00     0  |__oracle_1630_tnh
+10:19:43 PM 54321         -      1632    0.00    0.00    0.00    0.00     0  |__oracle_1632_tnh
+10:19:43 PM 54321         -      1633    0.00    0.00    0.00    0.00     0  |__oracle_1633_tnh
+10:19:43 PM 54321         -      1634    0.00    0.00    0.00    0.00     0  |__oracle_1634_tnh
+10:19:43 PM 54321         -      1635    0.00    0.00    0.00    0.00     0  |__ora_m000_tnh19d
+
+
+
+ similarly we can again look at sql level as well
+ 
+SQL> COL SPID FORMAT a8
+SQL> COL STID FORMAT a8
+SQL> SELECT SPID, STID, PROGRAM FROM V$PROCESS ORDER BY SPID;
+
+SPID	 STID	  PROGRAM
+-------- -------- ------------------------------------------------
+19980	 19980	  oracle@localhost.localdomain (PMON)
+19982	 19982	  oracle@localhost.localdomain (SCMN)
+19982	 19983	  oracle@localhost.localdomain (CLMN)
+19982	 19992	  oracle@localhost.localdomain (MMAN)
+19982	 20013	  oracle@localhost.localdomain (SMON)
+19982	 20012	  oracle@localhost.localdomain (CKPT)
+19982	 20005	  oracle@localhost.localdomain (PMAN)
+19982	 19990	  oracle@localhost.localdomain (GEN0)
+19982	 20019	  oracle@localhost.localdomain (LREG)
+19982	 20002	  oracle@localhost.localdomain (DBRM)
+19985	 19985	  oracle@localhost.localdomain (PSP0)
+
+SPID	 STID	  PROGRAM
+-------- -------- ------------------------------------------------
+19987	 19987	  oracle@localhost.localdomain (VKTM)
+19994	 19994	  oracle@localhost.localdomain (SCMN)
+19994	 19995	  oracle@localhost.localdomain (GEN1)
+19997	 19998	  oracle@localhost.localdomain (DIAG)
+19997	 19997	  oracle@localhost.localdomain (SCMN)
+19997	 20003	  oracle@localhost.localdomain (VKRM)
+19997	 20004	  oracle@localhost.localdomain (SVCB)
+19997	 20006	  oracle@localhost.localdomain (DIA0)
+19997	 20015	  oracle@localhost.localdomain (SMCO)
+19997	 20016	  oracle@localhost.localdomain (W000)
+19997	 20017	  oracle@localhost.localdomain (RECO)
+
+SPID	 STID	  PROGRAM
+-------- -------- ------------------------------------------------
+19997	 20018	  oracle@localhost.localdomain (W001)
+19997	 20020	  oracle@localhost.localdomain (PXMN)
+19997	 20033	  oracle@localhost.localdomain
+19997	 20022	  oracle@localhost.localdomain (MMON)
+19997	 20023	  oracle@localhost.localdomain (MMNL)
+19997	 20024	  oracle@localhost.localdomain (D000)
+19997	 20025	  oracle@localhost.localdomain (S000)
+19997	 20029	  oracle@localhost.localdomain (N000)
+19997	 20034	  oracle@localhost.localdomain
+19997	 20035	  oracle@localhost.localdomain
+19997	 20036	  oracle@localhost.localdomain
+
+SPID	 STID	  PROGRAM
+-------- -------- ------------------------------------------------
+19997	 20037	  oracle@localhost.localdomain
+19997	 20038	  oracle@localhost.localdomain
+19997	 20039	  oracle@localhost.localdomain
+19997	 20040	  oracle@localhost.localdomain
+19997	 20041	  oracle@localhost.localdomain
+19997	 20042	  oracle@localhost.localdomain
+19997	 20043	  oracle@localhost.localdomain
+19997	 20044	  oracle@localhost.localdomain
+19997	 20562	  oracle@localhost.localdomain (M005)
+19997	 20046	  oracle@localhost.localdomain
+19997	 20047	  oracle@localhost.localdomain
+
+SPID	 STID	  PROGRAM
+-------- -------- ------------------------------------------------
+19997	 20048	  oracle@localhost.localdomain
+19997	 20049	  oracle@localhost.localdomain
+19997	 20050	  oracle@localhost.localdomain
+19997	 20051	  oracle@localhost.localdomain
+19997	 20052	  oracle@localhost.localdomain
+19997	 20053	  oracle@localhost.localdomain (M000)
+19997	 20054	  oracle@localhost.localdomain (M001)
+19997	 20058	  oracle@localhost.localdomain
+19997	 20059	  oracle@localhost.localdomain
+19997	 20060	  oracle@localhost.localdomain
+19997	 20061	  oracle@localhost.localdomain
+
+SPID	 STID	  PROGRAM
+-------- -------- ------------------------------------------------
+19997	 20062	  oracle@localhost.localdomain
+19997	 20063	  oracle@localhost.localdomain
+19997	 20064	  oracle@localhost.localdomain
+19997	 20065	  oracle@localhost.localdomain
+19997	 20066	  oracle@localhost.localdomain
+19997	 20067	  oracle@localhost.localdomain
+19997	 20073	  oracle@localhost.localdomain (AQPC)
+19997	 20074	  oracle@localhost.localdomain (QM02)
+19997	 20075	  oracle@localhost.localdomain (Q001)
+19997	 20077	  oracle@localhost.localdomain (CJQ0)
+19997	 20231	  oracle@localhost.localdomain (W002)
+
+SPID	 STID	  PROGRAM
+-------- -------- ------------------------------------------------
+19997	 20079	  oracle@localhost.localdomain (P000)
+19997	 20080	  oracle@localhost.localdomain (P001)
+19997	 20246	  oracle@localhost.localdomain (W003)
+19997	 20248	  oracle@localhost.localdomain (M002)
+19997	 20249	  oracle@localhost.localdomain (M003)
+19997	 20265	  oracle@localhost.localdomain (W004)
+19997	 20262	  oracle@localhost.localdomain (M004)
+19997	 20282	  oracle@localhost.localdomain (Q003)
+20000	 20000	  oracle@localhost.localdomain (SCMN)
+20000	 20001	  oracle@localhost.localdomain (OFSD)
+20008	 20008	  oracle@localhost.localdomain (DBW0)
+
+SPID	 STID	  PROGRAM
+-------- -------- ------------------------------------------------
+20010	 20011	  oracle@localhost.localdomain (LGWR)
+20010	 20010	  oracle@localhost.localdomain (SCMN)
+20027	 20070	  oracle@localhost.localdomain (TT02)
+20027	 20069	  oracle@localhost.localdomain (TT01)
+20027	 20028	  oracle@localhost.localdomain (TMON)
+20027	 20027	  oracle@localhost.localdomain (SCMN)
+20027	 20068	  oracle@localhost.localdomain (TT00)
+		  PSEUDO
+
+85 rows selected.
+
+
+
+ After enabling the threaded_execution parameter now it gives thread details as above.
+ 
+ 
+
+
+
+The whole objective of multi threading system is to reduce the resource consumption
+and optimize them and also reduce context switching.
+
+ There are impacts to the listener bahaviour as well which will be discussed later
+
+ To get further information at DB level try below
+ 
+ select spid,stid,execution_type,pname from v$process 
+ where spid is not null and (execution_type='PROCESS' or pname in 
+ ('PMON','SMON','DBW0','PSP0','VKTM','MMON','RECO','LGWR','SCMN'));
+ 
+ select p.execution_type,s.server,count(*) 
+ from v$process p,v$session s  where s.paddr=p.addr 
+ group by p.execution_type,s.server; 
+ 
+ 
+ with 21c
+ 
+ https://docs.oracle.com/en/database/oracle/oracle-database/21/refrn/THREADED_EXECUTION.html#GUID-7A668A49-9FC5-4245-AD27-10D90E5AE8A8
+ 
+ https://docs.oracle.com/en/database/oracle/oracle-database/21/ntqrf/about-thread-based-architecture.html#GUID-991E7A28-AC46-40F3-ACEC-8EAB1CCE6E5A
+ 
