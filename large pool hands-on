@@ -1,0 +1,156 @@
+
+SQL> show parameter large
+
+SQL> show parameter mem
+
+SQL> create table mopt(n number , name varchar2(10)) memoptimize for write;
+create table mopt(n number , name varchar2(10)) memoptimize for write
+*
+ERROR at line 1:
+ORA-12754: Feature 'Memoptimized Rowstore' is disabled due to missing capability 
+'Runtime Environment'.
+
+
+set line 150
+ col PARAMETER format a30
+ col DESCRIPTION format a60
+ col SESSION_VALUE format a10
+ col INSTANCE_VALUE format a10
+ spool HIDDEN_parameter_database.log
+ 
+ 
+ SELECT a.ksppinm AS parameter,
+        a.ksppdesc AS description,
+        b.ksppstvl AS session_value,
+        c.ksppstvl AS instance_value
+ FROM   x$ksppi a,
+        x$ksppcv b,
+        x$ksppsv c
+ WHERE  a.indx = b.indx
+ AND    a.indx = c.indx
+ AND    a.ksppinm LIKE '/_%' ESCAPE '/'
+ ORDER BY a.ksppinm;
+ 
+spool off
+
+
+
+SQL> ALTER SYSTEM SET memoptimize_pool_size = 100M SCOPE=SPFILE;
+
+System altered.
+
+SQL> shutdown immediate;
+Database closed.
+Database dismounted.
+ORACLE instance shut down.
+SQL> startup
+ORA-12754: Feature 'Memoptimized Rowstore' is disabled due to missing capability 'Runtime Environment'.
+
+
+[oracle@localhost dbs]$ ls
+hc_orcl19cdb.dat  init.ora     lkTNH19DB       snapcf_orcl19cdb.f
+hc_orclcdb.dat    lkORCL19CD   orapworcl19cdb  spfileorcl19cdb.ora
+hc_tnh19db.dat    lkORCL19CDB  orapwtnh19db    spfiletnh19db.ora
+
+[oracle@localhost 19.3.0]$ pwd
+/u01/app/oracle/product/19.3.0
+[oracle@localhost pfile]$ cd ../..
+[oracle@localhost oracle]$ ls
+admin  cfgtoollogs  diag                oradata  recovery_area
+audit  checkpoints  fast_recovery_area  product
+[oracle@localhost oracle]$ cd admin/
+[oracle@localhost admin]$ ls
+orcl12c  orcl19cdb  tnh19db
+[oracle@localhost admin]$ cd tnh19db/
+[oracle@localhost tnh19db]$ ls
+adump  dpdump  pfile  xdb_wallet
+[oracle@localhost tnh19db]$ cd pfile/
+[oracle@localhost pfile]$ ls
+init.ora.8212021215445
+
+[oracle@localhost pfile]$ ls
+init.ora.8212021215445
+[oracle@localhost pfile]$ cp init.ora.8212021215445 /u01/app/oracle/product/19.3.0/dbhome_1/dbs/inittnh19db.ora
+[oracle@localhost pfile]$ sqlplus sys as sysdba
+
+SQL*Plus: Release 19.0.0.0.0 - Production on Fri Dec 17 14:28:14 2021
+Version 19.3.0.0.0
+
+Copyright (c) 1982, 2019, Oracle.  All rights reserved.
+
+Enter password: 
+Connected to an idle instance.
+
+SQL> create spfile from pfile;
+
+File created.
+
+SQL> startup
+ORACLE instance started.
+
+Total System Global Area 3388995104 bytes
+Fixed Size		    8902176 bytes
+Variable Size		  671088640 bytes
+Database Buffers	 2701131776 bytes
+Redo Buffers		    7872512 bytes
+Database mounted.
+Database opened.
+
+SQL> alter system set "_exadata_feature_on"=true scope=spfile;
+
+SQL> alter system set "_exadata_feature_on"=false scope=spfile; 
+
+System altered.
+
+SQL> shutdown immediate;
+Database closed.
+Database dismounted.
+ORACLE instance shut down.
+SQL> startup
+ORACLE instance started.
+
+Total System Global Area 3388995104 bytes
+Fixed Size		    8902176 bytes
+Variable Size		  671088640 bytes
+Database Buffers	 2701131776 bytes
+Redo Buffers		    7872512 bytes
+Database mounted.
+Database opened.
+SQL> 
+SQL> ALTER SYSTEM SET memoptimize_pool_size = 100M SCOPE=SPFILE;
+
+System altered.
+
+SQL> shutdown immediate;
+Database closed.
+Database dismounted.
+ORACLE instance shut down.
+SQL> startup
+ORACLE instance started.
+
+Total System Global Area 3388995104 bytes
+Fixed Size		    8902176 bytes
+Variable Size		  771751936 bytes
+Database Buffers	 2600468480 bytes
+Redo Buffers		    7872512 bytes
+Database mounted.
+Database opened.
+SQL> create table mopt(n number , name varchar2(10)) memoptimize for write;
+
+Table created.
+
+SQL> insert /*+ memoptimize_write */ into mopt values (1,'abc');
+
+1 row created.
+
+SQL> select *from v$memoptimize_write_area;
+
+TOTAL_SIZE USED_SPACE FREE_SPACE NUM_WRITES NUM_WRITERS     CON_ID
+---------- ---------- ---------- ---------- ----------- ----------
+2154823680    1212896 2153610784	  0	      1 	 0
+
+
+
+
+
+
