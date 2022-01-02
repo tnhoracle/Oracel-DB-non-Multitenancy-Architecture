@@ -1,0 +1,216 @@
+Session 02
+==========
+
+SCN - System Change Number
+==========================
+
+SCN is a huge number with two components : SCN Base & SCN Wrap.
+
+SCN is a 6 byte (48 bits) number. Out of those 48 bits, SCN_WRAP is a 16 bits (2 Bytes)
+number and SCN_BASE is a 32 bit (4 Bytes) number. Both BASE & WRAP are used to control
+the value of the SCN.
+
+In Oracle Version 12c, the SCN number is an 8 byte number.
+
+The SCN values are continiously kept incremented to ensure that the database won’t run out of it. 
+SCN_WRAP is incremented by 1 when SCN_BASE reaches the value of 4 Billion and 
+SCN_BASE becomes 0.
+
+
+Enable the timing information in Sql Developer
+----------------------------------------------
+
+Go to Tools> Preferences > Database > NLS and set the Date Format as MM/DD/YYYY HH24:MI:SS
+
+smon_scn_time
+-------------
+
+smon_scn_time is a table that is filled by SMON every 5 minutes with a timestamp and the current SCN. 
+This table is not documented, so only look at it out of curiosity.
+
+[oracle@localhost admin]$ pwd
+/u01/app/oracle/product/19.3.0/dbhome_1/rdbms/admin
+[oracle@localhost admin]$ cat dtxnspc.bsq
+
+select SCN_wrp, SCN_bas, SCN from smon_SCN_time where rownum < 10;
+
+select count(*) from SMON_SCN_TIME;
+
+Find the current scn in the database
+------------------------------------
+
+Session 03
+==========
+
+
+
+SQL>  select current_scn from V$database;
+
+CURRENT_SCN
+-----------
+    4810164
+
+
+SQL> select scn_to_timestamp (4774342) from dual;
+
+SCN_TO_TIMESTAMP(4774056)
+---------------------------------------------------------------------------
+28-DEC-21 03.23.40.000000000 PM
+
+
+SQL> select timestamp_to_scn(to_timestamp('28-DEC-21 15.23.40','dd-MM-yy hh24:mi:ss')) scn from dual;
+
+       SCN
+----------
+  4810159
+
+select timestamp_to_scn(to_timestamp('27/12/2021 05:32:17','DD/MM/YYYY HH24:MI:SS')) as scn from dual;
+   
+
+The time mapping of SCN with time is +/- 3 seconds. As this is stored in an internal table
+ Oracle doesn’t allow access to the information from this table directly. To access it we can use the below 
+function.
+
+
+GET_SYSTEM_CHANGE_NUMBER Function
+---------------------------------
+This function returns the current SCN as an Oracle number datatype. You can obtain the current change number
+and store it for later use  This helps you retain specific snapshots.
+
+https://docs.oracle.com/en/database/oracle/oracle-database/19/arpls/DBMS_FLASHBACK.html#GUID-AB866FCB-26FC-47C2-ACB0-DD1F6C7A35F3
+
+Let's use below hierachical query 
+
+select SCN_to_timestamp(SCN) ts, min(SCN), max(SCN)
+	       from (
+	    select dbms_flashback.get_system_change_number()-level SCN
+	      from dual
+	     connect by level <= 100
+		   )
+	      group by SCN_to_timestamp(SCN)
+	   order by SCN_to_timestamp(SCN);
+
+
+
+Session 04
+==========
+
+drop table t purge;
+
+create table t ( x int );
+
+select dbms_flashback.get_system_change_number scn from dual;
+
+4922248     
+
+ begin
+            for i in 1 .. 1000
+            loop
+                    insert into t values ( i );
+            end loop;
+    end;
+    /
+
+select dbms_flashback.get_system_change_number - 4922248  from dual;
+
+
+DBMS_FLASHBACK.GET_SYSTEM_CHANGE_NUMBER-4891333 
+------------------------------------------------
+                                               153
+
+
+It only advanced by 153 - but we did over 1,000 dml statements The SCN is not assigned to a SQL statement. 
+
+The SCN is incremented upon commit, Let's continue 
+
+
+select dbms_flashback.get_system_change_number scn from dual;
+
+       SCN
+----------
+4922359
+
+begin
+            for i in 1 .. 1000
+            loop
+                    insert into t values ( i );
+		    COMMIT;
+            end loop;
+    end;
+    /
+
+select dbms_flashback.get_system_change_number - 4922359 from dual;
+
+DBMS_FLASHBACK.GET_SYSTEM_CHANGE_NUMBER-79178271
+------------------------------------------------
+                                            2028
+
+
+
+select dbms_flashback.get_system_change_number scn from dual;
+
+4924412
+
+insert into t values (1);
+
+select dbms_flashback.get_system_change_number scn from dual;
+4893466
+
+insert into t values (1);
+
+select dbms_flashback.get_system_change_number scn from dual;
+
+4893489
+
+insert into t values (1);
+
+select dbms_flashback.get_system_change_number scn from dual;
+
+4893505
+
+commit;
+
+select dbms_flashback.get_system_change_number scn from dual;
+
+4893516
+
+
+
+Session  05
+===========
+
+SELECT  xid, b.START_SCNB , b.XIDUSN AS "undo seg",b.XIDSLOT AS "slot",b.XIDSQN AS "seq", b.STATUS AS "txn status",b.UBASQN,b.UBABLK, a.sid , a.username
+      FROM v$session a, v$transaction b where username <> 'null';
+
+ADDR – the address of the transaction, which is a raw value
+XIDUSN – the undo segment number
+XIDSLOT – the slot#
+XIDSQN – the sequence# or record# inside the slot
+
+XIDSLOT: It is in the ITL list, the number of the slot
+
+https://docs.oracle.com/en/database/oracle/oracle-database/19/refrn/V-TRANSACTION.html#GUID-FAE908F8-24B1-4B90-8FC5-86FCB532431C
+
+
+Oracle keeps track of rows that are locked per transaction in a storage area at the top of each data block called the
+ Interested Transaction List (ITL). Two parameters, initrans and maxtrans, control the number of ITL slots in any 
+block for an object within Oracle.
+
+Initrans contains the total number of slots initially created in an Oracle database block when it is first used.
+ The maxtrans parameter sets the upper bound for the total number of entries allowed within the interested transaction 
+list for the block. As such, each transaction that plans to modify a database block will require a new slot in the ITL 
+list contained within the block. The maxtrans parameter also sets the upper limit for the number of concurrent transactions 
+that may be active at any single point in time within an Oracle database block.
+
+
+
+
+
+
+
+
+
+
+
+
+
