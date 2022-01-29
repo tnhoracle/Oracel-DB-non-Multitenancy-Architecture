@@ -1,0 +1,54 @@
+Categories of Checkpoints
+=========================
+
+Global Checkpoint
+-----------------
+
+All Dirty buffers from buffer cache will get temporary flushed to the relevant datafiles.
+Control files and the datafile header parts will get updated with the checkpoint information.
+
+When it happens  
+          - alter system checkpoint
+          - shut - I / N / TXN
+          - Alter Database begin backup 
+
+
+   shutdown normal -- wait till all txn complete / wait till all sessions disconnects / checkpoint    
+   shutdown transactional -- wait till all txn complete  / idle sessions - no / checkpoint    
+   shutdown immediate -- wait till all txn complete - no / idle sessions - no / Checkpoint happens
+  
+
+Log switch checkpoint 
+---------------------
+
+All Dirty buffers from buffer cache will get temporary flushed to the relevant datafiles.
+Control files and the datafile header parts will get updated with the checkpoint information.
+Datafile header may or may not update in between the cycle before the logswitch
+
+When It Happens
+         - alter system switch logfile 
+         - automatic log switch 
+
+
+incremental checkpoint
+-----------------------
+Flush only the LRU buffers from the Buffer Cache
+
+When It Happens
+
+         - Check point parameter settings - mttr time out
+ 	 - Every three seconds when dbwr writes LRU records to relavant .dbf files
+ 
+Partial checkpoint 
+------------------     
+
+Only for the selected data  in the DB buffer cache 
+
+When it happens    
+          - Tablespace offline  
+          - Drop table command
+	  
+
+Ref :
+https://docs.oracle.com/en/database/oracle/oracle-database/18/cncpt/oracle-database-instance.html#GUID-A3FAC5B6-928C-474C-9D4C-E5C5B27544E9
+
